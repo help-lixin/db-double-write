@@ -4,6 +4,10 @@
 # Log file
 *.log
 
+*.lst
+
+*target/*
+
 ./.idea/*
 
 # BlueJ files

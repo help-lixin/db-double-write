@@ -1,0 +1,9 @@
+/Users/lixin/GitRepository/data-sync-service/sqlparser/seata-sqlparser-druid/src/test/java/io/seata/sqlparser/druid/DruidLoaderForTest.java
+/Users/lixin/GitRepository/data-sync-service/sqlparser/seata-sqlparser-druid/src/test/java/io/seata/sqlparser/druid/MySQLDeleteRecognizerTest.java
+/Users/lixin/GitRepository/data-sync-service/sqlparser/seata-sqlparser-druid/src/test/java/io/seata/sqlparser/druid/DruidIsolationTest.java
+/Users/lixin/GitRepository/data-sync-service/sqlparser/seata-sqlparser-druid/src/test/java/io/seata/sqlparser/druid/DruidDbTypeParserTest.java
+/Users/lixin/GitRepository/data-sync-service/sqlparser/seata-sqlparser-druid/src/test/java/io/seata/sqlparser/druid/AbstractRecognizerTest.java
+/Users/lixin/GitRepository/data-sync-service/sqlparser/seata-sqlparser-druid/src/test/java/io/seata/sqlparser/druid/MySQLSelectForUpdateRecognizerTest.java
+/Users/lixin/GitRepository/data-sync-service/sqlparser/seata-sqlparser-druid/src/test/java/io/seata/sqlparser/druid/DruidSQLRecognizerFactoryTest.java
+/Users/lixin/GitRepository/data-sync-service/sqlparser/seata-sqlparser-druid/src/test/java/io/seata/sqlparser/druid/MySQLUpdateRecognizerTest.java
+/Users/lixin/GitRepository/data-sync-service/sqlparser/seata-sqlparser-druid/src/test/java/io/seata/sqlparser/druid/MySQLInsertRecognizerTest.java

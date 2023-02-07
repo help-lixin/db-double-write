@@ -6,9 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="2bbc53f2-e9d7-48ac-9063-e4bcc85434ec" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasource/src/main/resources/META-INF/services/io.seata.rm.datasource.undo.UndoLogParser" beforeDir="false" afterPath="$PROJECT_DIR$/datasource/src/main/resources/META-INF/services/io.seata.rm.datasource.undo.UndoLogParser" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/datasource/src/test/java/io/seata/rm/datasource/DataSourceProxyTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/datasource/src/test/java/io/seata/rm/datasource/DataSourceProxyTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

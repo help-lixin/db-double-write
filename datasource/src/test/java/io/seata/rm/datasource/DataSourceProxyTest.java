@@ -64,10 +64,5 @@ public class DataSourceProxyTest {
         Field userNameField = proxy.getClass().getDeclaredField("userName");
         userNameField.setAccessible(true);
         userNameField.set(proxy, username);
-
-//        Assertions.assertEquals(proxy.getResourceId(), "jdbc:mock:xxx/username");
-
-//        dbTypeField.set(proxy, io.seata.sqlparser.util.JdbcConstants.MYSQL);
-//        Assertions.assertEquals(proxy.getResourceId(), "jdbc:mock:xxx");
     }
 }

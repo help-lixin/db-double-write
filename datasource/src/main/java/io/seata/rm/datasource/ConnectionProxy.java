@@ -16,16 +16,15 @@
 package io.seata.rm.datasource;
 
 import help.lixin.plugin.api.IDataSyncService;
+import help.lixin.plugin.ctx.SyncContext;
 import io.seata.common.loader.EnhancedServiceLoader;
 import io.seata.rm.datasource.undo.SQLUndoLog;
-import io.seata.rm.datasource.undo.UndoLogManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.concurrent.Callable;
 
 /**
  * The type Connection proxy.
@@ -89,9 +88,13 @@ public class ConnectionProxy extends AbstractConnectionProxy {
             List<IDataSyncService> dataSyncServices = EnhancedServiceLoader.loadAll(IDataSyncService.class);
             if (null != dataSyncServices) {
                 for (IDataSyncService dataSyncService : dataSyncServices) {
-                    dataSyncService.sync(context.getUndoItems());
+                    SyncContext ctx = new SyncContext();
+                    ctx.setItems(context.getUndoItems());
+                    ctx.getOthers().put("__connection", this);
+                    dataSyncService.sync(ctx);
                 }
             }
+
             // UndoLogManagerFactory.getUndoLogManager(this.getDbType()).flushUndoLogs(this);
             // 模拟拦截器出现故障
             // int i = 1 / 0;

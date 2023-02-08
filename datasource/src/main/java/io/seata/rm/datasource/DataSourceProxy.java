@@ -53,9 +53,6 @@ public class DataSourceProxy extends AbstractDataSourceProxy {
      */
     private static final long TABLE_META_CHECKER_INTERVAL = 60000L;
 
-//    private final ScheduledExecutorService tableMetaExcutor = new ScheduledThreadPoolExecutor(1,
-//            new NamedThreadFactory("tableMetaChecker", 1, true));
-
     /**
      * Instantiates a new Data source proxy.
      *

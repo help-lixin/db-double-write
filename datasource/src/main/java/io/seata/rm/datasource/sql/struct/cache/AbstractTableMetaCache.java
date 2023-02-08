@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import io.seata.common.exception.ShouldNeverHappenException;
 import io.seata.common.util.StringUtils;
 import io.seata.rm.datasource.sql.struct.TableMeta;
 import io.seata.rm.datasource.sql.struct.TableMetaCache;
@@ -62,11 +63,9 @@ public abstract class AbstractTableMetaCache implements TableMetaCache {
                 return null;
             }
         });
-
-        // TODO lixin
-//        if (tmeta == null) {
-//            throw new ShouldNeverHappenException(String.format("[xid:%s]get tablemeta failed", RootContext.getXID()));
-//        }
+        if (tmeta == null) {
+            throw new ShouldNeverHappenException(String.format("get tablemeta failed"));
+        }
         return tmeta;
     }
 

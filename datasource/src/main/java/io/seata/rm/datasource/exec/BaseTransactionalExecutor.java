@@ -81,7 +81,7 @@ public abstract class BaseTransactionalExecutor<T, S extends Statement> implemen
      * @param sqlRecognizer     the sql recognizer
      */
     public BaseTransactionalExecutor(StatementProxy<S> statementProxy, StatementCallback<T, S> statementCallback,
-        SQLRecognizer sqlRecognizer) {
+                                     SQLRecognizer sqlRecognizer) {
         this.statementProxy = statementProxy;
         this.statementCallback = statementCallback;
         this.sqlRecognizer = sqlRecognizer;
@@ -95,7 +95,7 @@ public abstract class BaseTransactionalExecutor<T, S extends Statement> implemen
      * @param sqlRecognizers    the multi sql recognizer
      */
     public BaseTransactionalExecutor(StatementProxy<S> statementProxy, StatementCallback<T, S> statementCallback,
-        List<SQLRecognizer> sqlRecognizers) {
+                                     List<SQLRecognizer> sqlRecognizers) {
         this.statementProxy = statementProxy;
         this.statementCallback = statementCallback;
         this.sqlRecognizers = sqlRecognizers;
@@ -103,13 +103,6 @@ public abstract class BaseTransactionalExecutor<T, S extends Statement> implemen
 
     @Override
     public T execute(Object... args) throws Throwable {
-        // TODO lixin
-//        String xid = RootContext.getXID();
-//        if (xid != null) {
-//            statementProxy.getConnectionProxy().bind(xid);
-//        }
-//
-//        statementProxy.getConnectionProxy().setGlobalLockRequire(RootContext.requireGlobalLock());
         return doExecute(args);
     }
 
@@ -211,11 +204,7 @@ public abstract class BaseTransactionalExecutor<T, S extends Statement> implemen
             return tableMeta;
         }
         ConnectionProxy connectionProxy = statementProxy.getConnectionProxy();
-        // TODO lixin
-//        tableMeta = TableMetaCacheFactory.getTableMetaCache(connectionProxy.getDbType())
-//                .getTableMeta(connectionProxy.getTargetConnection(), tableName, connectionProxy.getDataSourceProxy().getResourceId());
-
-        tableMeta = TableMetaCacheFactory.getTableMetaCache(connectionProxy.getDbType()).getTableMeta(connectionProxy.getTargetConnection(), tableName, null);
+        tableMeta = TableMetaCacheFactory.getTableMetaCache(connectionProxy.getDbType()).getTableMeta(connectionProxy.getTargetConnection(), tableName, connectionProxy.getDataSourceProxy().getResourceId());
         return tableMeta;
     }
 
@@ -274,46 +263,9 @@ public abstract class BaseTransactionalExecutor<T, S extends Statement> implemen
         }
 
         ConnectionProxy connectionProxy = statementProxy.getConnectionProxy();
-
-        TableRecords lockKeyRecords = sqlRecognizer.getSQLType() == SQLType.DELETE ? beforeImage : afterImage;
-        String lockKeys = buildLockKey(lockKeyRecords);
-        connectionProxy.appendLockKey(lockKeys);
-
         SQLUndoLog sqlUndoLog = buildUndoItem(beforeImage, afterImage);
+        // 仅仅把:SQLUndoLog塞在:ConnectionContext里.
         connectionProxy.appendUndoLog(sqlUndoLog);
-    }
-
-    /**
-     * build lockKey
-     *
-     * @param rowsIncludingPK the records
-     * @return the string as local key. the local key example(multi pk): "t_user:1_a,2_b"
-     */
-    protected String buildLockKey(TableRecords rowsIncludingPK) {
-        if (rowsIncludingPK.size() == 0) {
-            return null;
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append(rowsIncludingPK.getTableMeta().getTableName());
-        sb.append(":");
-        int filedSequence = 0;
-        List<Map<String, Field>> pksRows = rowsIncludingPK.pkRows();
-        for (Map<String, Field> rowMap : pksRows) {
-            int pkSplitIndex = 0;
-            for (String pkName : getTableMeta().getPrimaryKeyOnlyName()) {
-                if (pkSplitIndex > 0) {
-                    sb.append("_");
-                }
-                sb.append(rowMap.get(pkName).getValue());
-                pkSplitIndex++;
-            }
-            filedSequence++;
-            if (filedSequence < pksRows.size()) {
-                sb.append(",");
-            }
-        }
-        return sb.toString();
     }
 
     /**
@@ -373,9 +325,9 @@ public abstract class BaseTransactionalExecutor<T, S extends Statement> implemen
     protected TableRecords buildTableRecords(Map<String, List<Object>> pkValuesMap) throws SQLException {
         List<String> pkColumnNameList = getTableMeta().getPrimaryKeyOnlyName();
         StringBuilder sql = new StringBuilder()
-            .append("SELECT * FROM ")
-            .append(getFromTableInSQL())
-            .append(" WHERE ");
+                .append("SELECT * FROM ")
+                .append(getFromTableInSQL())
+                .append(" WHERE ");
         // build check sql
         String firstKey = pkValuesMap.keySet().stream().findFirst().get();
         int rowSize = pkValuesMap.get(firstKey).size();

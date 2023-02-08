@@ -43,31 +43,28 @@ public interface UndoLogManager {
      * Undo.
      *
      * @param dataSourceProxy the data source proxy
-     * @param xid             the xid
-     * @param branchId        the branch id
+     * @param id             the id
      * @throws TransactionException the transaction exception
      */
-    void undo(DataSourceProxy dataSourceProxy, String xid, long branchId) throws TransactionException;
+    void undo(DataSourceProxy dataSourceProxy, String id) throws TransactionException;
 
     /**
      * Delete undo log.
      *
-     * @param xid      the xid
-     * @param branchId the branch id
+     * @param id      the id
      * @param conn     the conn
      * @throws SQLException the sql exception
      */
-    void deleteUndoLog(String xid, long branchId, Connection conn) throws SQLException;
+    void deleteUndoLog(String id,  Connection conn) throws SQLException;
 
     /**
      * batch Delete undo log.
      *
-     * @param xids the xid set collections
-     * @param branchIds the branch id set collections
+     * @param ids the xid set collections
      * @param conn the connection
      * @throws SQLException the sql exception
      */
-    void batchDeleteUndoLog(Set<String> xids, Set<Long> branchIds, Connection conn) throws SQLException;
+    void batchDeleteUndoLog(Set<String> ids,  Connection conn) throws SQLException;
 
     /**
      * delete undolog by created

@@ -25,12 +25,7 @@ public interface ClientTableColumnsName {
     /**
      * The constant undo_log column name xid
      */
-    String UNDO_LOG_XID = "xid";
-
-    /**
-     * The constant undo_log column name branch_id
-     */
-    String UNDO_LOG_BRANCH_XID = "branch_id";
+    String UNDO_LOG_ID = "id";
 
     /**
      * The constant undo_log column name context

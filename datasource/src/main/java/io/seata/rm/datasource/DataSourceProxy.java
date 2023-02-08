@@ -122,7 +122,7 @@ public class DataSourceProxy extends AbstractDataSourceProxy {
      * @return the db type
      */
     public String getDbType() {
-        return dbType;
+        return "mysql";
     }
 
     @Override
@@ -158,13 +158,13 @@ public class DataSourceProxy extends AbstractDataSourceProxy {
      *
      * @return resource id
      */
-    private String getDefaultResourceId() {
-        if (jdbcUrl.contains("?")) {
-            return jdbcUrl.substring(0, jdbcUrl.indexOf('?'));
-        } else {
-            return jdbcUrl;
-        }
-    }
+//    private String getDefaultResourceId() {
+//        if (jdbcUrl.contains("?")) {
+//            return jdbcUrl.substring(0, jdbcUrl.indexOf('?'));
+//        } else {
+//            return jdbcUrl;
+//        }
+//    }
 
     /**
      * prevent pg sql url like
@@ -177,27 +177,34 @@ public class DataSourceProxy extends AbstractDataSourceProxy {
      *
      * @return resourceId
      */
-    private String getPGResourceId() {
-        if (jdbcUrl.contains("?")) {
-            StringBuilder jdbcUrlBuilder = new StringBuilder();
-            jdbcUrlBuilder.append(jdbcUrl.substring(0, jdbcUrl.indexOf('?')));
-            StringBuilder paramsBuilder = new StringBuilder();
-            String paramUrl = jdbcUrl.substring(jdbcUrl.indexOf('?') + 1, jdbcUrl.length());
-            String[] urlParams = paramUrl.split("&");
-            for (String urlParam : urlParams) {
-                if (urlParam.contains("currentSchema")) {
-                    paramsBuilder.append(urlParam);
-                    break;
-                }
-            }
+//    private String getPGResourceId() {
+//        if (jdbcUrl.contains("?")) {
+//            StringBuilder jdbcUrlBuilder = new StringBuilder();
+//            jdbcUrlBuilder.append(jdbcUrl.substring(0, jdbcUrl.indexOf('?')));
+//            StringBuilder paramsBuilder = new StringBuilder();
+//            String paramUrl = jdbcUrl.substring(jdbcUrl.indexOf('?') + 1, jdbcUrl.length());
+//            String[] urlParams = paramUrl.split("&");
+//            for (String urlParam : urlParams) {
+//                if (urlParam.contains("currentSchema")) {
+//                    paramsBuilder.append(urlParam);
+//                    break;
+//                }
+//            }
+//
+//            if (paramsBuilder.length() > 0) {
+//                jdbcUrlBuilder.append("?");
+//                jdbcUrlBuilder.append(paramsBuilder);
+//            }
+//            return jdbcUrlBuilder.toString();
+//        } else {
+//            return jdbcUrl;
+//        }
+//    }
 
-            if (paramsBuilder.length() > 0) {
-                jdbcUrlBuilder.append("?");
-                jdbcUrlBuilder.append(paramsBuilder);
-            }
-            return jdbcUrlBuilder.toString();
-        } else {
-            return jdbcUrl;
-        }
+
+    // TODO lixin
+    public String getResourceId(){
+        return "";
     }
+
 }

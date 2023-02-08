@@ -65,12 +65,6 @@ public class ExecuteTemplate {
                                                      StatementCallback<T, S> statementCallback,
                                                      Object... args) throws SQLException {
 
-// TODO lixin
-//                if (!RootContext.requireGlobalLock() && BranchType.AT != RootContext.getBranchType()) {
-//            // Just work as original statement
-//            return statementCallback.execute(statementProxy.getTargetStatement(), args);
-//        }
-
         String dbType = statementProxy.getConnectionProxy().getDbType();
         if (CollectionUtils.isEmpty(sqlRecognizers)) {
             sqlRecognizers = SQLVisitorFactory.get(

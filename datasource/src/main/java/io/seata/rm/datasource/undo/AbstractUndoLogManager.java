@@ -15,17 +15,6 @@
  */
 package io.seata.rm.datasource.undo;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.SQLIntegrityConstraintViolationException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import io.seata.common.Constants;
 import io.seata.common.util.CollectionUtils;
 import io.seata.core.constants.ClientTableColumnsName;
@@ -38,6 +27,10 @@ import io.seata.rm.datasource.sql.struct.TableMetaCacheFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.*;
+import java.util.*;
+
+import static io.seata.common.DefaultValues.DEFAULT_TRANSACTION_UNDO_LOG_TABLE;
 
 /**
  * @author jsbxyyx
@@ -68,18 +61,14 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
         }
     }
 
-    protected static final String UNDO_LOG_TABLE_NAME = "undo_log";
-
-
-//    protected static final String UNDO_LOG_TABLE_NAME = ConfigurationFactory.getInstance().getConfig(
-//        ConfigurationKeys.TRANSACTION_UNDO_LOG_TABLE, DEFAULT_TRANSACTION_UNDO_LOG_TABLE);
+    protected static final String UNDO_LOG_TABLE_NAME = DEFAULT_TRANSACTION_UNDO_LOG_TABLE;
 
     protected static final String SELECT_UNDO_LOG_SQL = "SELECT * FROM " + UNDO_LOG_TABLE_NAME + " WHERE "
-        + ClientTableColumnsName.UNDO_LOG_BRANCH_XID + " = ? AND " + ClientTableColumnsName.UNDO_LOG_XID
-        + " = ? FOR UPDATE";
+            + ClientTableColumnsName.UNDO_LOG_ID
+            + " = ? FOR UPDATE";
 
     protected static final String DELETE_UNDO_LOG_SQL = "DELETE FROM " + UNDO_LOG_TABLE_NAME + " WHERE "
-        + ClientTableColumnsName.UNDO_LOG_BRANCH_XID + " = ? AND " + ClientTableColumnsName.UNDO_LOG_XID + " = ?";
+            + ClientTableColumnsName.UNDO_LOG_ID + " = ?";
 
     private static final ThreadLocal<String> SERIALIZER_LOCAL = new ThreadLocal<>();
 
@@ -98,16 +87,14 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
     /**
      * Delete undo log.
      *
-     * @param xid      the xid
-     * @param branchId the branch id
+     * @param id      the id
      * @param conn     the conn
      * @throws SQLException the sql exception
      */
     @Override
-    public void deleteUndoLog(String xid, long branchId, Connection conn) throws SQLException {
+    public void deleteUndoLog(String id, Connection conn) throws SQLException {
         try (PreparedStatement deletePST = conn.prepareStatement(DELETE_UNDO_LOG_SQL)) {
-            deletePST.setLong(1, branchId);
-            deletePST.setString(2, xid);
+            deletePST.setString(1, id);
             deletePST.executeUpdate();
         } catch (Exception e) {
             if (!(e instanceof SQLException)) {
@@ -120,25 +107,20 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
     /**
      * batch Delete undo log.
      *
-     * @param xids
-     * @param branchIds
+     * @param ids
      * @param conn
      */
     @Override
-    public void batchDeleteUndoLog(Set<String> xids, Set<Long> branchIds, Connection conn) throws SQLException {
-        if (CollectionUtils.isEmpty(xids) || CollectionUtils.isEmpty(branchIds)) {
+    public void batchDeleteUndoLog(Set<String> ids, Connection conn) throws SQLException {
+        if (CollectionUtils.isEmpty(ids) ) {
             return;
         }
-        int xidSize = xids.size();
-        int branchIdSize = branchIds.size();
-        String batchDeleteSql = toBatchDeleteUndoLogSql(xidSize, branchIdSize);
+        int idSize = ids.size();
+        String batchDeleteSql = toBatchDeleteUndoLogSql(idSize);
         try (PreparedStatement deletePST = conn.prepareStatement(batchDeleteSql)) {
             int paramsIndex = 1;
-            for (Long branchId : branchIds) {
-                deletePST.setLong(paramsIndex++, branchId);
-            }
-            for (String xid : xids) {
-                deletePST.setString(paramsIndex++, xid);
+            for (String id : ids) {
+                deletePST.setString(paramsIndex++, id);
             }
             int deleteRows = deletePST.executeUpdate();
             if (LOGGER.isDebugEnabled()) {
@@ -152,12 +134,10 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
         }
     }
 
-    protected static String toBatchDeleteUndoLogSql(int xidSize, int branchIdSize) {
+    protected static String toBatchDeleteUndoLogSql(int xidSize) {
         StringBuilder sqlBuilder = new StringBuilder(64);
-        sqlBuilder.append("DELETE FROM ").append(UNDO_LOG_TABLE_NAME).append(" WHERE  ").append(
-            ClientTableColumnsName.UNDO_LOG_BRANCH_XID).append(" IN ");
-        appendInParam(branchIdSize, sqlBuilder);
-        sqlBuilder.append(" AND ").append(ClientTableColumnsName.UNDO_LOG_XID).append(" IN ");
+        sqlBuilder.append("DELETE FROM ").append(UNDO_LOG_TABLE_NAME).append(" WHERE  ")
+                .append(ClientTableColumnsName.UNDO_LOG_ID).append(" IN ");
         appendInParam(xidSize, sqlBuilder);
         return sqlBuilder.toString();
     }
@@ -196,16 +176,10 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
     @Override
     public void flushUndoLogs(ConnectionProxy cp) throws SQLException {
         ConnectionContext connectionContext = cp.getContext();
-        if (!connectionContext.hasUndoLog()) {
-            return;
-        }
 
-        String xid = connectionContext.getXid();
-        long branchId = connectionContext.getBranchId();
-
+        String id = UUID.randomUUID().toString().replace("-","");
         BranchUndoLog branchUndoLog = new BranchUndoLog();
-        branchUndoLog.setXid(xid);
-        branchUndoLog.setBranchId(branchId);
+        branchUndoLog.setId(id);
         branchUndoLog.setSqlUndoLogs(connectionContext.getUndoItems());
 
         UndoLogParser parser = UndoLogParserFactory.getInstance();
@@ -215,19 +189,19 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
             LOGGER.debug("Flushing UNDO LOG: {}", new String(undoLogContent, Constants.DEFAULT_CHARSET));
         }
 
-        insertUndoLogWithNormal(xid, branchId, buildContext(parser.getName()), undoLogContent,
-            cp.getTargetConnection());
+        insertUndoLogWithNormal(id, buildContext(parser.getName()), undoLogContent,
+                cp.getTargetConnection());
     }
 
     /**
      * Undo.
      *
      * @param dataSourceProxy the data source proxy
-     * @param xid             the xid
-     * @param branchId        the branch id
+     * @param id             the id
+     * @throws TransactionException the transaction exception
      */
     @Override
-    public void undo(DataSourceProxy dataSourceProxy, String xid, long branchId) throws TransactionException {
+    public void undo(DataSourceProxy dataSourceProxy, String id) throws TransactionException {
         Connection conn = null;
         ResultSet rs = null;
         PreparedStatement selectPST = null;
@@ -244,8 +218,7 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
 
                 // Find UNDO LOG
                 selectPST = conn.prepareStatement(SELECT_UNDO_LOG_SQL);
-                selectPST.setLong(1, branchId);
-                selectPST.setString(2, xid);
+                selectPST.setString(1, id);
                 rs = selectPST.executeQuery();
 
                 boolean exists = false;
@@ -258,7 +231,7 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
                     int state = rs.getInt(ClientTableColumnsName.UNDO_LOG_LOG_STATUS);
                     if (!canUndo(state)) {
                         if (LOGGER.isInfoEnabled()) {
-                            LOGGER.info("xid {} branch {}, ignore {} undo_log", xid, branchId, state);
+                            LOGGER.info("xid {} ,ignore {} undo_log", id,  state);
                         }
                         return;
                     }
@@ -269,7 +242,7 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
 
                     String serializer = context == null ? null : context.get(UndoLogConstants.SERIALIZER_KEY);
                     UndoLogParser parser = serializer == null ? UndoLogParserFactory.getInstance()
-                        : UndoLogParserFactory.getInstance(serializer);
+                            : UndoLogParserFactory.getInstance(serializer);
                     BranchUndoLog branchUndoLog = parser.decode(rollbackInfo);
 
                     try {
@@ -280,15 +253,11 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
                             Collections.reverse(sqlUndoLogs);
                         }
                         for (SQLUndoLog sqlUndoLog : sqlUndoLogs) {
-
                             TableMeta tableMeta = TableMetaCacheFactory.getTableMetaCache(dataSourceProxy.getDbType()).getTableMeta(
-                                    conn, sqlUndoLog.getTableName(), null);
-                                // TODO lixin
-//                            TableMeta tableMeta = TableMetaCacheFactory.getTableMetaCache(dataSourceProxy.getDbType()).getTableMeta(
-//                                conn, sqlUndoLog.getTableName(), dataSourceProxy.getResourceId());
+                                    conn, sqlUndoLog.getTableName(), dataSourceProxy.getResourceId());
                             sqlUndoLog.setTableMeta(tableMeta);
                             AbstractUndoExecutor undoExecutor = UndoExecutorFactory.getUndoExecutor(
-                                dataSourceProxy.getDbType(), sqlUndoLog);
+                                    dataSourceProxy.getDbType(), sqlUndoLog);
                             undoExecutor.executeOn(conn);
                         }
                     } finally {
@@ -307,18 +276,18 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
                 // See https://github.com/seata/seata/issues/489
 
                 if (exists) {
-                    deleteUndoLog(xid, branchId, conn);
+                    deleteUndoLog(id, conn);
                     conn.commit();
                     if (LOGGER.isInfoEnabled()) {
-                        LOGGER.info("xid {} branch {}, undo_log deleted with {}", xid, branchId,
-                            State.GlobalFinished.name());
+                        LOGGER.info("xid {} undo_log deleted with {}", id,
+                                State.GlobalFinished.name());
                     }
                 } else {
-                    insertUndoLogWithGlobalFinished(xid, branchId, UndoLogParserFactory.getInstance(), conn);
+                    insertUndoLogWithGlobalFinished(id, UndoLogParserFactory.getInstance(), conn);
                     conn.commit();
                     if (LOGGER.isInfoEnabled()) {
-                        LOGGER.info("xid {} branch {}, undo_log added with {}", xid, branchId,
-                            State.GlobalFinished.name());
+                        LOGGER.info("xid {}  , undo_log added with {}", id,
+                                State.GlobalFinished.name());
                     }
                 }
 
@@ -326,7 +295,7 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
             } catch (SQLIntegrityConstraintViolationException e) {
                 // Possible undo_log has been inserted into the database by other processes, retrying rollback undo_log
                 if (LOGGER.isInfoEnabled()) {
-                    LOGGER.info("xid {} branch {}, undo_log inserted, retry rollback", xid, branchId);
+                    LOGGER.info("xid {}   undo_log inserted, retry rollback", id );
                 }
             } catch (Throwable e) {
                 if (conn != null) {
@@ -336,10 +305,10 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
                         LOGGER.warn("Failed to close JDBC resource while undo ... ", rollbackEx);
                     }
                 }
-                // TODO lixin
+                // TOOD lixin
 //                throw new BranchTransactionException(BranchRollbackFailed_Retriable, String
-//                    .format("Branch session rollback failed and try again later xid = %s branchId = %s %s", xid,
-//                        branchId, e.getMessage()), e);
+//                        .format("Branch session rollback failed and try again later xid = %s branchId = %s %s", xid,
+//                                branchId, e.getMessage()), e);
 
             } finally {
                 try {
@@ -365,26 +334,24 @@ public abstract class AbstractUndoLogManager implements UndoLogManager {
     /**
      * insert uodo log when global finished
      *
-     * @param xid           the xid
-     * @param branchId      the branchId
+     * @param id           the id
      * @param undoLogParser the undoLogParse
      * @param conn          sql connection
      * @throws SQLException
      */
-    protected abstract void insertUndoLogWithGlobalFinished(String xid, long branchId, UndoLogParser undoLogParser,
+    protected abstract void insertUndoLogWithGlobalFinished(String id,  UndoLogParser undoLogParser,
                                                             Connection conn) throws SQLException;
 
     /**
      * insert uodo log when normal
      *
-     * @param xid            the xid
-     * @param branchId       the branchId
+     * @param id            the id
      * @param rollbackCtx    the rollbackContext
      * @param undoLogContent the undoLogContent
      * @param conn           sql connection
      * @throws SQLException
      */
-    protected abstract void insertUndoLogWithNormal(String xid, long branchId, String rollbackCtx,
+    protected abstract void insertUndoLogWithNormal(String id, String rollbackCtx,
                                                     byte[] undoLogContent, Connection conn) throws SQLException;
 
     /**

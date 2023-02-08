@@ -15,20 +15,17 @@
  */
 package io.seata.rm.datasource;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.concurrent.Callable;
-
-import io.seata.rm.datasource.exec.LockConflictException;
-import io.seata.rm.datasource.exec.LockRetryController;
+import help.lixin.plugin.api.IDataSyncService;
+import io.seata.common.loader.EnhancedServiceLoader;
 import io.seata.rm.datasource.undo.SQLUndoLog;
 import io.seata.rm.datasource.undo.UndoLogManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static io.seata.common.DefaultValues.DEFAULT_CLIENT_LOCK_RETRY_POLICY_BRANCH_ROLLBACK_ON_CONFLICT;
-import static io.seata.common.DefaultValues.DEFAULT_CLIENT_REPORT_RETRY_COUNT;
-import static io.seata.common.DefaultValues.DEFAULT_CLIENT_REPORT_SUCCESS_ENABLE;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.List;
+import java.util.concurrent.Callable;
 
 /**
  * The type Connection proxy.
@@ -40,14 +37,6 @@ public class ConnectionProxy extends AbstractConnectionProxy {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConnectionProxy.class);
 
     private ConnectionContext context = new ConnectionContext();
-
-    // TODO lixin
-    private static final int REPORT_RETRY_COUNT = 3;
-
-    // TODO lixin
-    public static final boolean IS_REPORT_SUCCESS_ENABLE = Boolean.TRUE;
-
-    private final static LockRetryPolicy LOCK_RETRY_POLICY = new LockRetryPolicy();
 
     /**
      * Instantiates a new Connection proxy.
@@ -69,90 +58,6 @@ public class ConnectionProxy extends AbstractConnectionProxy {
     }
 
     /**
-     * Bind.
-     *
-     * @param xid the xid
-     */
-    public void bind(String xid) {
-        context.bind(xid);
-    }
-
-    /**
-     * set global lock requires flag
-     *
-     * @param isLock whether to lock
-     */
-    // public void setGlobalLockRequire(boolean isLock) {
-//        context.setGlobalLockRequire(isLock);
-//    }
-
-    /**
-     * get global lock requires flag
-     */
-    // public boolean isGlobalLockRequire() {
-//        return context.isGlobalLockRequire();
-//    }
-
-    /**
-     * Check lock.
-     *
-     * @param lockKeys the lockKeys
-     * @throws SQLException the sql exception
-     */
-    public void checkLock(String lockKeys) throws SQLException {
-        // TODO lixin
-//        if (StringUtils.isBlank(lockKeys)) {
-//            return;
-//        }
-//        // Just check lock without requiring lock by now.
-//        try {
-//            boolean lockable = DefaultResourceManager.get().lockQuery(BranchType.AT,
-//                getDataSourceProxy().getResourceId(), context.getXid(), lockKeys);
-//            if (!lockable) {
-//                throw new LockConflictException();
-//            }
-//        } catch (TransactionException e) {
-//            recognizeLockKeyConflictException(e, lockKeys);
-//        }
-    }
-
-    /**
-     * Lock query.
-     *
-     * @param lockKeys the lock keys
-     * @throws SQLException the sql exception
-     */
-    public boolean lockQuery(String lockKeys) throws SQLException {
-        // Just check lock without requiring lock by now.
-        boolean result = false;
-        // TODO lixin
-//        try {
-//            result = DefaultResourceManager.get().lockQuery(BranchType.AT, getDataSourceProxy().getResourceId(),
-//                context.getXid(), lockKeys);
-//        } catch (TransactionException e) {
-//            recognizeLockKeyConflictException(e, lockKeys);
-//        }
-        return result;
-    }
-
-//    private void recognizeLockKeyConflictException(TransactionException te) throws SQLException {
-//        recognizeLockKeyConflictException(te, null);
-//    }
-
-//    private void recognizeLockKeyConflictException(TransactionException te, String lockKeys) throws SQLException {
-//        if (te.getCode() == TransactionExceptionCode.LockKeyConflict) {
-//            StringBuilder reasonBuilder = new StringBuilder("get global lock fail, xid:");
-//            reasonBuilder.append(context.getXid());
-//            if (StringUtils.isNotBlank(lockKeys)) {
-//                reasonBuilder.append(", lockKeys:").append(lockKeys);
-//            }
-//            throw new LockConflictException(reasonBuilder.toString());
-//        } else {
-//            throw new SQLException(te);
-//        }
-//    }
-
-    /**
      * append sqlUndoLog
      *
      * @param sqlUndoLog the sql undo log
@@ -161,22 +66,14 @@ public class ConnectionProxy extends AbstractConnectionProxy {
         context.appendUndoItem(sqlUndoLog);
     }
 
-    /**
-     * append lockKey
-     *
-     * @param lockKey the lock key
-     */
-    public void appendLockKey(String lockKey) {
-        context.appendLockKey(lockKey);
-    }
 
     @Override
     public void commit() throws SQLException {
         try {
-            LOCK_RETRY_POLICY.execute(() -> {
-                doCommit();
-                return null;
-            });
+            // 执行拦截器
+            doInterceptor();
+            // 拦截器没有抛出错误的情况下,再进行commit提交
+            targetConnection.commit();
         } catch (SQLException e) {
             if (targetConnection != null && !getAutoCommit()) {
                 rollback();
@@ -187,129 +84,36 @@ public class ConnectionProxy extends AbstractConnectionProxy {
         }
     }
 
-    private void doCommit() throws SQLException {
-        if (context.inGlobalTransaction()) {
-            processGlobalTransactionCommit();
-        } else if (context.isGlobalLockRequire()) {
-            processLocalCommitWithGlobalLocks();
-        } else {
-            targetConnection.commit();
-        }
-    }
-
-    private void processLocalCommitWithGlobalLocks() throws SQLException {
-        checkLock(context.buildLockKeys());
+    private void doInterceptor() throws SQLException {
         try {
-            targetConnection.commit();
-        } catch (Throwable ex) {
-            throw new SQLException(ex);
-        }
-        context.reset();
-    }
-
-    private void processGlobalTransactionCommit() throws SQLException {
-//        try {
-//            register();
-//        } catch (TransactionException e) {
-//            recognizeLockKeyConflictException(e, context.buildLockKeys());
-//        }
-        try {
-            UndoLogManagerFactory.getUndoLogManager(this.getDbType()).flushUndoLogs(this);
-            targetConnection.commit();
+            List<IDataSyncService> dataSyncServices = EnhancedServiceLoader.loadAll(IDataSyncService.class);
+            if (null != dataSyncServices) {
+                for (IDataSyncService dataSyncService : dataSyncServices) {
+                    dataSyncService.sync(context.getUndoItems());
+                }
+            }
+            // UndoLogManagerFactory.getUndoLogManager(this.getDbType()).flushUndoLogs(this);
+            // 模拟拦截器出现故障
+            // int i = 1 / 0;
         } catch (Throwable ex) {
             LOGGER.error("process connectionProxy commit error: {}", ex.getMessage(), ex);
-//            report(false);
             throw new SQLException(ex);
-        }
-        if (IS_REPORT_SUCCESS_ENABLE) {
-//            report(true);
         }
         context.reset();
     }
-
-//    private void register() throws TransactionException {
-//        if (!context.hasUndoLog() || context.getLockKeysBuffer().isEmpty()) {
-//            return;
-//        }
-//        Long branchId = DefaultResourceManager.get().branchRegister(BranchType.AT, getDataSourceProxy().getResourceId(),
-//            null, context.getXid(), null, context.buildLockKeys());
-//        context.setBranchId(branchId);
-//    }
 
     @Override
     public void rollback() throws SQLException {
         targetConnection.rollback();
-//        if (context.inGlobalTransaction() && context.isBranchRegistered()) {
-//            report(false);
-//        }
         context.reset();
     }
 
     @Override
     public void setAutoCommit(boolean autoCommit) throws SQLException {
-        if ((context.inGlobalTransaction() || context.isGlobalLockRequire()) && autoCommit && !getAutoCommit()) {
+        if (autoCommit && !getAutoCommit()) {
             // change autocommit from false to true, we should commit() first according to JDBC spec.
-            doCommit();
+            commit();
         }
         targetConnection.setAutoCommit(autoCommit);
-    }
-
-//    private void report(boolean commitDone) throws SQLException {
-//        if (context.getBranchId() == null) {
-//            return;
-//        }
-//        int retry = REPORT_RETRY_COUNT;
-//        while (retry > 0) {
-//            try {
-//                DefaultResourceManager.get().branchReport(BranchType.AT, context.getXid(), context.getBranchId(),
-//                    commitDone ? BranchStatus.PhaseOne_Done : BranchStatus.PhaseOne_Failed, null);
-//                return;
-//            } catch (Throwable ex) {
-//                LOGGER.error("Failed to report [" + context.getBranchId() + "/" + context.getXid() + "] commit done ["
-//                    + commitDone + "] Retry Countdown: " + retry);
-//                retry--;
-//
-//                if (retry == 0) {
-//                    throw new SQLException("Failed to report branch status " + commitDone, ex);
-//                }
-//            }
-//        }
-//    }
-
-    public static class LockRetryPolicy {
-        // TODO lixin
-        protected static final boolean LOCK_RETRY_POLICY_BRANCH_ROLLBACK_ON_CONFLICT = Boolean.TRUE;
-
-        public <T> T execute(Callable<T> callable) throws Exception {
-            if (LOCK_RETRY_POLICY_BRANCH_ROLLBACK_ON_CONFLICT) {
-                return callable.call();
-            } else {
-                return doRetryOnLockConflict(callable);
-            }
-        }
-
-        protected <T> T doRetryOnLockConflict(Callable<T> callable) throws Exception {
-            LockRetryController lockRetryController = new LockRetryController();
-            while (true) {
-                try {
-                    return callable.call();
-                } catch (LockConflictException lockConflict) {
-                    onException(lockConflict);
-                    lockRetryController.sleep(lockConflict);
-                } catch (Exception e) {
-                    onException(e);
-                    throw e;
-                }
-            }
-        }
-
-        /**
-         * Callback on exception in doLockRetryOnConflict.
-         *
-         * @param e invocation exception
-         * @throws Exception error
-         */
-        protected void onException(Exception e) throws Exception {
-        }
     }
 }

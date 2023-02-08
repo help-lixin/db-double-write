@@ -45,7 +45,7 @@ public class UpdateExecutor<T, S extends Statement> extends AbstractDMLBaseExecu
 
 
     // TODO lixin
-    private static final boolean ONLY_CARE_UPDATE_COLUMNS = Boolean.TRUE;
+    private static final boolean ONLY_CARE_UPDATE_COLUMNS = Boolean.FALSE;
 
     /**
      * Instantiates a new Update executor.

@@ -107,25 +107,24 @@ public abstract class AbstractConnectionProxy implements Connection {
         String dbType = getDbType();
         // support oracle 10.2+
         PreparedStatement targetPreparedStatement = null;
-        // TODO lixin
         List<SQLRecognizer> sqlRecognizers = SQLVisitorFactory.get(sql, dbType);
         if (sqlRecognizers != null && sqlRecognizers.size() == 1) {
             SQLRecognizer sqlRecognizer = sqlRecognizers.get(0);
+            // 针对INSERT语句,尝试获取表里的第一条数据,然后,去拿一下表的元数据,并把元数据通过cache进行缓存.
             if (sqlRecognizer != null && sqlRecognizer.getSQLType() == SQLType.INSERT) {
-                // TODO lixin
-//                TableMeta tableMeta = TableMetaCacheFactory.getTableMetaCache(dbType).getTableMeta(getTargetConnection(),
-//                        sqlRecognizer.getTableName(), getDataSourceProxy().getResourceId());
-
-                TableMeta tableMeta = TableMetaCacheFactory.getTableMetaCache(dbType).getTableMeta(getTargetConnection(),
-                        sqlRecognizer.getTableName(), null);
+                TableMeta tableMeta = TableMetaCacheFactory.getTableMetaCache(dbType)
+                        // 表名称是缓存的key,value为:TableMeta
+                        .getTableMeta(getTargetConnection(), sqlRecognizer.getTableName(), getDataSourceProxy().getResourceId());
                 String[] pkNameArray = new String[tableMeta.getPrimaryKeyOnlyName().size()];
                 tableMeta.getPrimaryKeyOnlyName().toArray(pkNameArray);
                 targetPreparedStatement = getTargetConnection().prepareStatement(sql, pkNameArray);
             }
         }
+
         if (targetPreparedStatement == null) {
             targetPreparedStatement = getTargetConnection().prepareStatement(sql);
         }
+
         return new PreparedStatementProxy(this, targetPreparedStatement, sql);
     }
 
@@ -287,8 +286,6 @@ public abstract class AbstractConnectionProxy implements Connection {
     @Override
     public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency,
                                          int resultSetHoldability) throws SQLException {
-        // TODO lixin
-        // RootContext.assertNotInGlobalTransaction();
         return targetConnection.prepareCall(sql, resultSetType, resultSetConcurrency, resultSetHoldability);
     }
 

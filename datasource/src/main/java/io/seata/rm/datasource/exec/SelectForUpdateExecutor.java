@@ -90,12 +90,13 @@ public class SelectForUpdateExecutor<T, S extends Statement> extends BaseTransac
 
                     // Try to get global lock of those rows selected
                     TableRecords selectPKRows = buildTableRecords(getTableMeta(), selectPKSQL, paramAppenderList);
-                    String lockKeys = buildLockKey(selectPKRows);
-                    if (StringUtils.isNullOrEmpty(lockKeys)) {
-                        break;
-                    }
-
                     // TODO lixin
+//                    String lockKeys = buildLockKey(selectPKRows);
+//                    if (StringUtils.isNullOrEmpty(lockKeys)) {
+//                        break;
+//                    }
+
+
 //                    if (RootContext.inGlobalTransaction() || RootContext.requireGlobalLock()) {
 //                        // Do the same thing under either @GlobalTransactional or @GlobalLock,
 //                        // that only check the global lock  here.

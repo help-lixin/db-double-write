@@ -15,54 +15,75 @@
  */
 package io.seata.rm.datasource;
 
-import javax.sql.DataSource;
-import java.lang.reflect.Field;
-import java.sql.SQLException;
-
 import com.alibaba.druid.pool.DruidDataSource;
-import io.seata.rm.datasource.mock.MockDataSource;
-import io.seata.rm.datasource.mock.MockDriver;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 
 /**
  * @author ph3636
  */
 public class DataSourceProxyTest {
 
+    private DruidDataSource targetDataSource;
+
+    @Before
+    public void init() throws Exception {
+        targetDataSource = new DruidDataSource();
+        targetDataSource.setUrl("jdbc:mysql://127.0.0.1:3306/order_db?characterEncoding=utf-8&useSSL=false");
+        targetDataSource.setUsername("root");
+        targetDataSource.setPassword("123456");
+        targetDataSource.setDefaultAutoCommit(false);
+        targetDataSource.init();
+    }
+
+
     @Test
-    public void test_constructor() {
-        DataSource dataSource = new MockDataSource();
-
-        DataSourceProxy dataSourceProxy = new DataSourceProxy(dataSource);
-        Assertions.assertEquals(dataSourceProxy.getTargetDataSource(), dataSource);
-
-        DataSourceProxy dataSourceProxy2 = new DataSourceProxy(dataSourceProxy);
-        Assertions.assertEquals(dataSourceProxy2.getTargetDataSource(), dataSource);
+    public void testInsert() throws Exception {
+        Connection connection = (Connection) targetDataSource.getConnection();
+        PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO t_order_1(order_id,price,user_id,status) VALUES(?,?,?,?)");
+        preparedStatement.setLong(1, 620244933478973441L);
+        preparedStatement.setBigDecimal(2, new BigDecimal(39.50));
+        preparedStatement.setLong(3, 2l);
+        preparedStatement.setString(4, "FAIL");
+        boolean execute = preparedStatement.execute();
+        connection.commit();
     }
 
     @Test
-    public void getResourceIdTest() throws SQLException, NoSuchFieldException, IllegalAccessException {
-        MockDriver mockDriver = new MockDriver();
-        String username = "username";
+    public void testProxyInsert() throws Exception {
+        DataSourceProxy proxy = new DataSourceProxy(targetDataSource);
+        Connection connection = (Connection) proxy.getConnection();
+        PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO t_order_1(order_id,price,user_id,status) VALUES(?,?,?,?)");
+        preparedStatement.setLong(1, 620244933478973441L);
+        preparedStatement.setBigDecimal(2, new BigDecimal(39.50));
+        preparedStatement.setLong(3, 2l);
+        preparedStatement.setString(4, "FAIL");
+        boolean execute = preparedStatement.execute();
+        connection.commit();
+    }
 
-        DruidDataSource dataSource = new DruidDataSource();
-        dataSource.setUrl("jdbc:mock:xxx");
-        dataSource.setDriver(mockDriver);
-        dataSource.setUsername(username);
-        dataSource.setPassword("password");
+    @Test
+    public void testProxyUpdate() throws Exception {
+        DataSourceProxy proxy = new DataSourceProxy(targetDataSource);
+        Connection connection = (Connection) proxy.getConnection();
+        PreparedStatement preparedStatement = connection.prepareStatement("UPDATE t_order_1 SET status = ? WHERE status = ?");
+        preparedStatement.setString(1, "SUCCESS");
+        preparedStatement.setString(2, "FAIL");
+        int cout = preparedStatement.executeUpdate();
+        connection.commit();
+    }
 
-        DataSourceProxy proxy = new DataSourceProxy(dataSource);
-
-        Field dbTypeField = proxy.getClass().getDeclaredField("dbType");
-        dbTypeField.setAccessible(true);
-        dbTypeField.set(proxy, io.seata.sqlparser.util.JdbcConstants.ORACLE);
-
-        String userName = dataSource.getConnection().getMetaData().getUserName();
-        Assertions.assertEquals(userName, username);
-
-        Field userNameField = proxy.getClass().getDeclaredField("userName");
-        userNameField.setAccessible(true);
-        userNameField.set(proxy, username);
+    @Test
+    public void testProxyDelete() throws Exception {
+        DataSourceProxy proxy = new DataSourceProxy(targetDataSource);
+        Connection connection = (Connection) proxy.getConnection();
+        PreparedStatement preparedStatement = connection.prepareStatement("DELETE FROM t_order_1 WHERE user_id = ?");
+        preparedStatement.setLong(1,1);
+        int cout = preparedStatement.executeUpdate();
+        connection.commit();
     }
 }

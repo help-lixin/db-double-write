@@ -26,9 +26,7 @@ public class BranchUndoLog implements java.io.Serializable {
 
     private static final long serialVersionUID = -101750721633603671L;
 
-    private String xid;
-
-    private long branchId;
+    private String id;
 
     private List<SQLUndoLog> sqlUndoLogs;
 
@@ -37,8 +35,8 @@ public class BranchUndoLog implements java.io.Serializable {
      *
      * @return the xid
      */
-    public String getXid() {
-        return xid;
+    public String getId() {
+        return id;
     }
 
     /**
@@ -46,26 +44,8 @@ public class BranchUndoLog implements java.io.Serializable {
      *
      * @param xid the xid
      */
-    public void setXid(String xid) {
-        this.xid = xid;
-    }
-
-    /**
-     * Gets branch id.
-     *
-     * @return the branch id
-     */
-    public long getBranchId() {
-        return branchId;
-    }
-
-    /**
-     * Sets branch id.
-     *
-     * @param branchId the branch id
-     */
-    public void setBranchId(long branchId) {
-        this.branchId = branchId;
+    public void setId(String id) {
+        this.id = id;
     }
 
     /**

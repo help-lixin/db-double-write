@@ -80,7 +80,7 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
     @Override
     public T doExecute(Object... args) throws Throwable {
         AbstractConnectionProxy connectionProxy = statementProxy.getConnectionProxy();
-        if (connectionProxy.getAutoCommit()) {
+        if (connectionProxy.getAutoCommit()) { // 连接池配置是自动commit
             return executeAutoCommitTrue(args);
         } else {
             return executeAutoCommitFalse(args);
@@ -111,7 +111,7 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
         }
         if (CollectionUtils.isNotEmpty(sqlRecognizers)) {
             List<SQLRecognizer> distinctSQLRecognizer = sqlRecognizers.stream().filter(
-                distinctByKey(t -> t.getTableName())).collect(Collectors.toList());
+                    distinctByKey(t -> t.getTableName())).collect(Collectors.toList());
             for (SQLRecognizer sqlRecognizer : distinctSQLRecognizer) {
                 if (getTableMeta(sqlRecognizer.getTableName()).getPrimaryKeyOnlyName().size() > 1) {
                     return true;
@@ -138,17 +138,11 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
         ConnectionProxy connectionProxy = statementProxy.getConnectionProxy();
         try {
             connectionProxy.setAutoCommit(false);
-            return new LockRetryPolicy(connectionProxy).execute(() -> {
-                T result = executeAutoCommitFalse(args);
-                connectionProxy.commit();
-                return result;
-            });
+            T result = executeAutoCommitFalse(args);
+            connectionProxy.commit();
+            return result;
         } catch (Exception e) {
-            // when exception occur in finally,this exception will lost, so just print it here
             LOGGER.error("execute executeAutoCommitTrue error:{}", e.getMessage(), e);
-            if (!LockRetryPolicy.isLockRetryPolicyBranchRollbackOnConflict()) {
-                connectionProxy.getTargetConnection().rollback();
-            }
             throw e;
         } finally {
             connectionProxy.getContext().reset();
@@ -172,36 +166,6 @@ public abstract class AbstractDMLBaseExecutor<T, S extends Statement> extends Ba
      * @throws SQLException the sql exception
      */
     protected abstract TableRecords afterImage(TableRecords beforeImage) throws SQLException;
-
-    private static class LockRetryPolicy extends ConnectionProxy.LockRetryPolicy {
-        private final ConnectionProxy connection;
-
-        LockRetryPolicy(final ConnectionProxy connection) {
-            this.connection = connection;
-        }
-
-        @Override
-        public <T> T execute(Callable<T> callable) throws Exception {
-            if (LOCK_RETRY_POLICY_BRANCH_ROLLBACK_ON_CONFLICT) {
-                return doRetryOnLockConflict(callable);
-            } else {
-                return callable.call();
-            }
-        }
-
-        @Override
-        protected void onException(Exception e) throws Exception {
-            ConnectionContext context = connection.getContext();
-            //UndoItems can't use the Set collection class to prevent ABA
-            context.getUndoItems().clear();
-            context.getLockKeysBuffer().clear();
-            connection.getTargetConnection().rollback();
-        }
-
-        public static boolean isLockRetryPolicyBranchRollbackOnConflict() {
-            return LOCK_RETRY_POLICY_BRANCH_ROLLBACK_ON_CONFLICT;
-        }
-    }
 
     protected void assertContainsPKColumnName(List<String> updateColumns) {
         for (String columnName : updateColumns) {

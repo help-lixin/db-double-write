@@ -86,7 +86,8 @@ public class ConnectionProxy extends AbstractConnectionProxy {
     private void doInterceptor() throws SQLException {
         try {
             List<IDataSyncService> dataSyncServices = EnhancedServiceLoader.loadAll(IDataSyncService.class);
-            if (null != dataSyncServices) {
+            System.out.println("==========================" + dataSyncServices.size());
+            if (null != dataSyncServices && !context.getUndoItems().isEmpty()) {
                 for (IDataSyncService dataSyncService : dataSyncServices) {
                     SyncContext ctx = new SyncContext();
                     ctx.setItems(context.getUndoItems());
@@ -94,7 +95,6 @@ public class ConnectionProxy extends AbstractConnectionProxy {
                     dataSyncService.sync(ctx);
                 }
             }
-
             // UndoLogManagerFactory.getUndoLogManager(this.getDbType()).flushUndoLogs(this);
             // 模拟拦截器出现故障
             // int i = 1 / 0;

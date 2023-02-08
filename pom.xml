@@ -15,6 +15,10 @@
         <commons-lang.version>2.6</commons-lang.version>
         <netty4.version>4.1.30.Final</netty4.version>
 
+        <spring-cloud.version>2020.0.1</spring-cloud.version>
+        <spring-boot-dependencies.version>2.4.2</spring-boot-dependencies.version>
+        <spring-cloud-netflix.version>3.0.0</spring-cloud-netflix.version>
+
         <junit.version>4.12</junit.version>
         <junit-jupiter.version>5.4.2</junit-jupiter.version>
         <assertj-core.version>3.9.1</assertj-core.version>
@@ -34,10 +38,26 @@
         <module>common</module>
         <module>sqlparser</module>
         <module>datasource</module>
+        <module>example</module>
     </modules>
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot-dependencies.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>

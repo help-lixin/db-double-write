@@ -3,21 +3,32 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <groupId>help.lixin.data.sync</groupId>
-        <artifactId>data-sync-service-parent</artifactId>
+        <groupId>help.lixin.double.write</groupId>
+        <artifactId>db-double-write-service-parent</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>data-sync-datasource</artifactId>
+    <artifactId>db-double-write-datasource</artifactId>
     <packaging>jar</packaging>
-    <name>data-sync-datasource ${project.version}</name>
+    <name>db-double-write-datasource ${project.version}</name>
 
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>data-sync-sqlparser-core</artifactId>
+            <artifactId>db-double-write-sqlparser-core</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>help.lixin.double.write</groupId>
+            <artifactId>db-double-write-sqlparser-druid</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>db-double-write-plugin</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
@@ -38,13 +49,6 @@
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>data-sync-sqlparser-druid</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
-
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>

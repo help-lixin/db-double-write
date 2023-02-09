@@ -4,7 +4,7 @@
 现在市面上,普通数据库(比如:mysql)到elasticsearch之间的同步,皆是通过binlog订阅的方式,而这种方式会出现延迟的可能性,有没有一种方案,可以解决延迟呢?
 
 ### 2. 功能介绍
-> 注意,该功能的思想源于Seata AT模式的代码:
+> 注意:该功能的思想以及大量源码皆源于Seata AT模式,相当于在Seata AT模式上做了一下阉割,以符合业务.  
 
 1) 拦截"业务"对数据库的操作.
 2) 在"sql执行之前",反向生成sql语句(INSERT/UPDATE/DELETE转换成SELECT...FOR UPDATE),并且,根据sql语句检索出,受影响的"数据行"(称之为:beforeImage).

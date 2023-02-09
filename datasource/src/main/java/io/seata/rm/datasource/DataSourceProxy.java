@@ -80,7 +80,8 @@ public class DataSourceProxy extends AbstractDataSourceProxy {
         if (ENABLE_TABLE_META_CHECKER_ENABLE) {
             tableMetaExcutor.scheduleAtFixedRate(() -> {
                 try (Connection connection = dataSource.getConnection()) {
-                    TableMetaCacheFactory.getTableMetaCache(DataSourceProxy.this.getDbType()).refresh(connection, DataSourceProxy.this.getResourceId());
+                    TableMetaCacheFactory.getTableMetaCache(DataSourceProxy.this.getDbType()).
+                            refresh(connection, DataSourceProxy.this.getResourceId());
                 } catch (Exception ignore) {
                 }
             }, 0, TABLE_META_CHECKER_INTERVAL, TimeUnit.MILLISECONDS);

@@ -46,7 +46,7 @@ mysql> SELECT * FROM t_order_1;
 # 3. 假设要执行的业务操作是:更新订单表里,用户id为1的订单状态为:FAIL((前置条件)
 
 
-# 4. beforeImage SQL(改写SQL)
+# 4. beforeImage SQL(对业务SQL改写)
 mysql> SELECT * FROM t_order_1 WHERE user_id = 1 FOR UPDATE;
 { "order_id" : 620244933168594944 , "price": 34.50, , "user_id": 1, "status":"SUCCESS" }
 { "order_id" : 620244933034377216 , "price": 32.50, , "user_id": 1, "status":"SUCCESS" }
@@ -55,7 +55,7 @@ mysql> SELECT * FROM t_order_1 WHERE user_id = 1 FOR UPDATE;
 mysql> UPDATE  t_order_1 SET status = "FAIL" WHERE user_id = 1;
 
 
-# 6. afterImage SQL(改写SQL)
+# 6. afterImage SQL(对业务SQL改写)
 mysql> SELECT * FROM t_order_1 WHERE user_id = 1 FOR UPDATE;
 { "order_id" : 620244933168594944 , "price": 34.50, , "user_id": 1, "status":"FAIL" }
 { "order_id" : 620244933034377216 , "price": 32.50, , "user_id": 1, "status":"FAIL" }

@@ -9,8 +9,8 @@
 1) 拦截"业务"对数据库的操作.
 2) 在"sql执行之前",反向生成sql语句(INSERT/UPDATE/DELETE转换成SELECT...FOR UPDATE),并且,根据sql语句检索出,受影响的"数据行"(称之为:beforeImage).
 3) 执行"业务SQL语句".
-4) 在"sql执行之后",再次执行第2步的SELECT语句(这个结果集,称之为:afterImage)
-5) 把快照信息(beforeImage/afterImage)存储在"线程上下文中".
+4) 执行第2步的SELECT语句,重新检索出业务SQL处理后的结果集(这个结果集,称之为:afterImage)
+5) 把快照信息(beforeImage/afterImage)存储在"线程上下文中". 
 6) 在"执行commit之前",从"线程上下文中"中取出快照信息,把快照信息(beforeImage/afterImage)交给elasticsearch/mongodb等存储设备进行操作. 
 7) 第6步(es/mongodb)执行没异常的情况下,会调用:Connection.commit()方法,如果,有异常:调用:Connection.rollback()方法.
 

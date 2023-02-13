@@ -9,13 +9,13 @@
 1) 拦截"业务"对数据库的操作.
 2) 在"sql执行之前",反向生成sql语句(INSERT/UPDATE/DELETE转换成SELECT...FOR UPDATE),并且,根据sql语句检索出,受影响的"数据行"(称之为:beforeImage).
 3) 执行"业务SQL语句".
-4) 执行第2步的SELECT语句,重新检索出业务SQL处理后的结果集(这个结果集,称之为:afterImage)
+4) 再次,执行第2步的SELECT语句,重新检索出"业务SQL"更新后的数据行(这个结果集,称之为:afterImage)
 5) 把快照信息(beforeImage/afterImage)存储在"线程上下文中". 
 6) 在"执行commit之前",从"线程上下文中"中取出快照信息,把快照信息(beforeImage/afterImage)交给elasticsearch/mongodb等存储设备进行操作. 
 7) 第6步(es/mongodb)执行没异常的情况下,会调用:Connection.commit()方法,如果,有异常:调用:Connection.rollback()方法.
 
 
-### 3. 底层原理介绍
+### 3. 底层原理详细介绍
 ```
 # 1. 查看表结构(前置条件)
 mysql> desc t_order_1;
@@ -48,6 +48,7 @@ mysql> SELECT * FROM t_order_1;
 
 # 4. beforeImage SQL(对业务SQL改写)
 mysql> SELECT * FROM t_order_1 WHERE user_id = 1 FOR UPDATE;
+beforeImage内容:
 { "order_id" : 620244933168594944 , "price": 34.50, , "user_id": 1, "status":"SUCCESS" }
 { "order_id" : 620244933034377216 , "price": 32.50, , "user_id": 1, "status":"SUCCESS" }
 
@@ -57,12 +58,13 @@ mysql> UPDATE  t_order_1 SET status = "FAIL" WHERE user_id = 1;
 
 # 6. afterImage SQL(对业务SQL改写)
 mysql> SELECT * FROM t_order_1 WHERE user_id = 1 FOR UPDATE;
+afterImage内容:
 { "order_id" : 620244933168594944 , "price": 34.50, , "user_id": 1, "status":"FAIL" }
 { "order_id" : 620244933034377216 , "price": 32.50, , "user_id": 1, "status":"FAIL" }
 
 
 # 7. 需要说明的一点
-# 7.1 INSERT语句时,beforeImage是没有内容的,afterImage是插入后的数据.
+# 7.1 INSERT语句时,beforeImage是没有内容的,afterImage是插入后的最新数据.
 # 7.2 UPDATE语句时,beforeImage和afterImage都有数据. 
 # 7.3 DELETE语句时,beforeImage有数据,而afterImage是没有数据的.
 ```
